@@ -50,12 +50,13 @@ class AttendanceController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date'
         ]);
-
+    
         $startDate = Carbon::parse($request->input('start_date'));
         $endDate = Carbon::parse($request->input('end_date'));
-
+    
         $emp_id = auth()->user()->id;
-
+    
+        // Apply leaves
         for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
             Leave::create([
                 'emp_id' => $emp_id,
@@ -63,7 +64,24 @@ class AttendanceController extends Controller
                 'status' => 'pending'
             ]);
         }
-
-        return redirect()->back()->with('success', 'Leave applied successfully.');
+    
+        // Reapply sandwich logic here to update all attendance records
+        $attendanceRecords = Attendance::where('emp_id', $emp_id)->orderBy('date', 'asc')->get();
+        $newRecords = Attendance::applySandwichLogic($attendanceRecords);  
+        
+        // Update the attendance records in the database
+        foreach($newRecords as $newRecord) {
+            $attendance = Attendance::where('emp_id', $emp_id)
+                                    ->where('date', $newRecord->date)
+                                    ->first();
+            if($attendance) {
+                $attendance->status = $newRecord->status; 
+                $attendance->sandwichAffected = $newRecord->sandwichAffected; 
+                $attendance->save();
+            }
+        }
+    
+        return redirect()->back()->with('success', 'Leave applied successfully, and sandwich logic reapplied.');
     }
+    
 }
