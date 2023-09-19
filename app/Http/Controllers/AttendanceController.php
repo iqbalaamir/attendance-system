@@ -73,10 +73,6 @@ class AttendanceController extends Controller
             ]);
         }
     
-        // Reapply sandwich logic here to update all attendance records
-        $attendanceRecords = Attendance::where('emp_id', $emp_id)->orderBy('date', 'asc')->get();
-        
-    
         return redirect()->back()->with('success', 'Leave applied successfully, and sandwich logic reapplied.');
     }
     
