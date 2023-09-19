@@ -59,27 +59,23 @@ class AttendanceController extends Controller
         // Apply leaves
         for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
             Leave::create([
+                'user_id' => $emp_id,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'status' => 'pending',
+                'reason' => $request->input('reason')
+            ]);
+            Attendance::create([
                 'emp_id' => $emp_id,
                 'date' => $date->toDateString(),
-                'status' => 'pending'
+                'day' => $date->format('l'),
+                'status' => 'absent'
             ]);
         }
     
         // Reapply sandwich logic here to update all attendance records
         $attendanceRecords = Attendance::where('emp_id', $emp_id)->orderBy('date', 'asc')->get();
-        $newRecords = Attendance::applySandwichLogic($attendanceRecords);  
         
-        // Update the attendance records in the database
-        foreach($newRecords as $newRecord) {
-            $attendance = Attendance::where('emp_id', $emp_id)
-                                    ->where('date', $newRecord->date)
-                                    ->first();
-            if($attendance) {
-                $attendance->status = $newRecord->status; 
-                $attendance->sandwichAffected = $newRecord->sandwichAffected; 
-                $attendance->save();
-            }
-        }
     
         return redirect()->back()->with('success', 'Leave applied successfully, and sandwich logic reapplied.');
     }
